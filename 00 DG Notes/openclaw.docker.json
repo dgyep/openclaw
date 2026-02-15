@@ -1,0 +1,39 @@
+{
+  "gateway": {
+    "mode": "local"
+  },
+  "browser": {
+    "headless": true,
+    "noSandbox": true,
+    "executablePath": "/usr/bin/chromium",
+    "profiles": {
+      "default": {
+        "cdpPort": 18800
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "openrouter/minimax/minimax-m2.5"
+      },
+      "models": {
+        "anthropic/claude-sonnet-4-5": { "alias": "Sonnet" },
+        "anthropic/claude-opus-4-5": { "alias": "Opus" },
+        "openrouter/deepseek/deepseek-r1": { "alias": "R1" },
+        "openrouter/minimax/minimax-01": { "alias": "MiniMax" },
+        "openrouter/minimax/minimax-m2.1": { "alias": "M2.1" },
+        "openrouter/minimax/minimax-m2.5": { "alias": "M2.5" },
+        "openrouter/auto": { "alias": "OpenRouter" }
+      }
+    }
+  },
+  "discord": {
+    "token": "YOUR_DISCORD_BOT_TOKEN_HERE",
+    "channels": {
+      "guild:YOUR_GUILD_ID": {
+        "agent": "default"
+      }
+    }
+  }
+}

@@ -11,11 +11,11 @@ RUN chown node:node /app
 
 ARG OPENCLAW_DOCKER_APT_PACKAGES=""
 RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
-      apt-get update && \
-      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $OPENCLAW_DOCKER_APT_PACKAGES && \
-      apt-get clean && \
-      rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
-    fi
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $OPENCLAW_DOCKER_APT_PACKAGES && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
+  fi
 
 COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY --chown=node:node ui/package.json ./ui/package.json
@@ -32,15 +32,15 @@ RUN pnpm install --frozen-lockfile
 USER root
 ARG OPENCLAW_INSTALL_BROWSER=""
 RUN if [ -n "$OPENCLAW_INSTALL_BROWSER" ]; then \
-      apt-get update && \
-      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb && \
-      mkdir -p /home/node/.cache/ms-playwright && \
-      PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
-      node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
-      chown -R node:node /home/node/.cache/ms-playwright && \
-      apt-get clean && \
-      rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
-    fi
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb && \
+  mkdir -p /home/node/.cache/ms-playwright && \
+  PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
+  node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
+  chown -R node:node /home/node/.cache/ms-playwright && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
+  fi
 
 USER node
 COPY --chown=node:node . .
@@ -51,15 +51,27 @@ RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
+# Homebrew/Linuxbrew prerequisites (procps + file needed for brew health checks).
+# The entrypoint script bootstraps brew into the linuxbrew-home volume on first run.
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends procps file && \
+  apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Prepare linuxbrew directory so the named Docker volume inherits correct ownership
+# on first mount (Docker copies image contents + permissions into empty named volumes).
+RUN mkdir -p /home/linuxbrew/.linuxbrew && chown -R node:node /home/linuxbrew
+
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Disable Homebrew analytics and auto-update in containers.
+ENV HOMEBREW_NO_ANALYTICS=1
+ENV HOMEBREW_NO_AUTO_UPDATE=1
+
 # Security hardening: Run as non-root user
 # The node:22-bookworm image includes a 'node' user (uid 1000)
 # This reduces the attack surface by preventing container escape via root privileges
 USER node
 
-# Start gateway server with default config.
-# Binds to loopback (127.0.0.1) by default for security.
-#
-# For container platforms requiring external health checks:
-#   1. Set OPENCLAW_GATEWAY_TOKEN or OPENCLAW_GATEWAY_PASSWORD env var
-#   2. Override CMD: ["node","openclaw.mjs","gateway","--allow-unconfigured","--bind","lan"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
