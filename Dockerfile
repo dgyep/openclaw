@@ -51,6 +51,16 @@ RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
+# Browser support: Chromium + fonts for screenshots, web automation, and captcha handling.
+# Uses headless mode by default; configure browser.headless=true and browser.noSandbox=true.
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      chromium \
+      fonts-liberation \
+      fonts-noto-color-emoji \
+      fonts-noto-cjk \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Homebrew/Linuxbrew prerequisites (procps + file needed for brew health checks).
 # The entrypoint script bootstraps brew into the linuxbrew-home volume on first run.
 RUN apt-get update && \
